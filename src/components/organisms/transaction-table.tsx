@@ -3,40 +3,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import { ArrowRight, ChevronLeft, ChevronRight, Plus, ReceiptText, Search, X } from 'lucide-react';
 import { api, History, rupiah, Transaction } from '@/lib/api';
 import { kind, moment } from '@/lib/transaction';
 import { Button } from '@/components/atoms/button';
 import { Input } from '@/components/atoms/input';
-
-const helper = createColumnHelper<Transaction>();
-const columns = [
-  helper.accessor('type', {
-    header: 'Transaksi',
-    cell: info => {
-      const row = info.row.original;
-      const { label, Icon, out } = kind(row.type);
-      const party = row.counterparty ? (out ? 'Ke ' : 'Dari ') + row.counterparty.name : 'Saldo masuk ke dompetmu';
-      return <div className="cell-transaction"><span className={'transaction-icon' + (out ? ' out' : '')}><Icon size={17}/></span><span><strong>{label}</strong><small>{row.note || party}</small></span></div>;
-    },
-  }),
-  helper.accessor('reference', { header: 'Referensi', cell: info => <span className="cell-reference">{String(info.getValue()).slice(0, 8)}</span> }),
-  helper.accessor('created_at', { header: 'Waktu', cell: info => <span className="cell-time">{moment(String(info.getValue()))}</span> }),
-  helper.accessor('amount', {
-    header: 'Nominal',
-    cell: info => {
-      const row = info.row.original;
-      const { sign, out } = kind(row.type);
-      return <div className="cell-amount"><strong className={out ? 'out' : 'in'}>{sign}{rupiah(row.amount)}</strong><small>Saldo {rupiah(row.balance_after)}</small></div>;
-    },
-  }),
-  helper.display({
-    id: 'detail',
-    header: '',
-    cell: info => <Link className="detail-link" href={'/transactions/' + info.row.original.id} aria-label={'Lihat detail transaksi ' + info.row.original.reference}>Detail<ChevronRight size={14}/></Link>,
-  }),
-];
 
 const typeFilters = [
   { value: '', label: 'Semua jenis' },
@@ -44,6 +15,18 @@ const typeFilters = [
   { value: 'transfer_in', label: 'Transfer masuk' },
   { value: 'transfer_out', label: 'Transfer keluar' },
 ];
+
+function Row({ row }: { row: Transaction }) {
+  const { label, sign, out, Icon } = kind(row.type);
+  const party = row.counterparty ? (out ? 'Ke ' : 'Dari ') + row.counterparty.name : 'Saldo masuk ke dompetmu';
+  return <tr>
+    <td><div className="cell-transaction"><span className={'transaction-icon' + (out ? ' out' : '')}><Icon size={17}/></span><span><strong>{label}</strong><small>{row.note || party}</small></span></div></td>
+    <td><span className="cell-reference">{row.reference.slice(0, 8)}</span></td>
+    <td><span className="cell-time">{moment(row.created_at)}</span></td>
+    <td><div className="cell-amount"><strong className={out ? 'out' : 'in'}>{sign}{rupiah(row.amount)}</strong><small>Saldo {rupiah(row.balance_after)}</small></div></td>
+    <td><Link className="detail-link" href={'/transactions/' + row.id} aria-label={'Lihat detail transaksi ' + row.reference}>Detail<ChevronRight size={14}/></Link></td>
+  </tr>;
+}
 
 export function TransactionTable({ compact = false }: { compact?: boolean }) {
   const [type, setType] = useState('');
@@ -60,7 +43,6 @@ export function TransactionTable({ compact = false }: { compact?: boolean }) {
     placeholderData: keepPreviousData,
   });
   const rows = (query.data?.data ?? []).slice(0, compact ? 5 : undefined);
-  const table = useReactTable({ data: rows, columns, getCoreRowModel: getCoreRowModel() });
   const filtered = !compact && (!!type || !!search);
   const lastPage = query.data?.last_page ?? 1;
 
@@ -82,8 +64,8 @@ export function TransactionTable({ compact = false }: { compact?: boolean }) {
         : rows.length === 0
           ? <div className="empty-state"><ReceiptText size={26}/><h3>{filtered ? 'Tidak ada yang cocok.' : 'Belum ada transaksi.'}</h3><p>{filtered ? 'Ubah kata kunci atau pilih jenis transaksi lain.' : 'Mulai dengan mengisi saldo, lalu kirim ke pengguna Saku lain.'}</p>{filtered ? <Button variant="outline" onClick={() => { setTerm(''); setType(''); setPage(1); }}>Atur ulang filter</Button> : <Button asChild><Link href="/topup"><Plus/>Top up saldo</Link></Button>}</div>
           : <div className="table-scroll"><table>
-              <thead>{table.getHeaderGroups().map(group => <tr key={group.id}>{group.headers.map(header => <th key={header.id} scope="col">{flexRender(header.column.columnDef.header, header.getContext())}</th>)}</tr>)}</thead>
-              <tbody>{table.getRowModel().rows.map(row => <tr key={row.id}>{row.getVisibleCells().map(cell => <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}</tr>)}</tbody>
+              <thead><tr><th scope="col">Transaksi</th><th scope="col">Referensi</th><th scope="col">Waktu</th><th scope="col">Nominal</th><th scope="col"></th></tr></thead>
+              <tbody>{rows.map(row => <Row key={row.id} row={row}/>)}</tbody>
             </table></div>}
 
     {!compact && lastPage > 1 && rows.length > 0 && <div className="table-footer">
