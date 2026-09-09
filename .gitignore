@@ -1,0 +1,51 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next*/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Pre-atomic-design component files locked by a sandbox ACL on this machine.
+# Superseded by atoms/ organisms/ templates/; excluded from the repo. Delete the
+# physical files with an elevated shell (see README) — they are harmless dead code.
+/src/components/ui/
+/src/components/wallet-app.tsx
+/src/components/auth-screen.tsx
+/src/components/money-form.tsx
+/src/components/activity-chart.tsx
