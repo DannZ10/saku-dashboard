@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { IDLE_SECONDS, SESSION_COOKIE } from '@/lib/session';
 
+// Allow a free Render instance to wake up. Keep the upstream timeout below
+// the Vercel Fluid Compute function limit; never auto-retry a mutation here.
+export const maxDuration = 120;
+const UPSTREAM_TIMEOUT_MS = 90_000;
+
 const paths: Record<string, string> = { login: 'POST', register: 'POST', logout: 'POST', wallet: 'GET', transactions: 'GET', topup: 'POST', transfer: 'POST' };
 
 type Jar = Awaited<ReturnType<typeof cookies>>;
@@ -55,7 +60,7 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
       method: request.method,
       headers: { Accept: 'application/json', 'Content-Type': 'application/json', ...(token && !isAuth ? { Authorization: `Bearer ${token}` } : {}), ...(request.headers.get('idempotency-key') ? { 'Idempotency-Key': request.headers.get('idempotency-key')! } : {}) },
       ...(request.method === 'POST' ? { body: await request.text() } : {}),
-      cache: 'no-store', signal: AbortSignal.timeout(30000),
+      cache: 'no-store', signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
     });
     const payload = await upstream.json();
     if (isAuth && upstream.ok) {
